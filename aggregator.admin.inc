@@ -419,13 +419,14 @@ function aggregator_admin_refresh_feed($feed) {
  * @ingroup forms
  */
 function aggregator_admin_form($form, $form_state) {
+  $config = config('aggregator.settings');
   // Global aggregator settings.
-  $form['aggregator_allowed_html_tags'] = array(
+  $form['allowed_html_tags'] = array(
     '#type' => 'textfield',
     '#title' => t('Allowed HTML tags'),
     '#size' => 80,
     '#maxlength' => 255,
-    '#default_value' => variable_get('aggregator_allowed_html_tags', '<a> <b> <br> <dd> <dl> <dt> <em> <i> <li> <ol> <p> <strong> <u> <ul>'),
+    '#default_value' => $config->get('allowed_html_tags'),
     '#description' => t('A space-separated list of HTML tags allowed in the content of feed items. Disallowed tags are stripped from the content.'),
   );
 
@@ -479,7 +480,7 @@ function aggregator_admin_form($form, $form_state) {
       '#title' => t('Fetcher'),
       '#description' => t('Fetchers download data from an external source. Choose a fetcher suitable for the external source you would like to download from.'),
       '#options' => $fetchers,
-      '#default_value' => variable_get('aggregator_fetcher', 'aggregator'),
+      '#default_value' => $config->get('fetcher'),
     );
   }
   if (count($parsers) > 1) {
@@ -488,7 +489,7 @@ function aggregator_admin_form($form, $form_state) {
       '#title' => t('Parser'),
       '#description' => t('Parsers transform downloaded data into standard structures. Choose a parser suitable for the type of feeds you would like to aggregate.'),
       '#options' => $parsers,
-      '#default_value' => variable_get('aggregator_parser', 'aggregator'),
+      '#default_value' => $config->get('parser'),
     );
   }
   if (count($processors) > 1) {
@@ -497,7 +498,7 @@ function aggregator_admin_form($form, $form_state) {
       '#title' => t('Processors'),
       '#description' => t('Processors act on parsed feed data, for example they store feed items. Choose the processors suitable for your task.'),
       '#options' => $processors,
-      '#default_value' => variable_get('aggregator_processors', array('aggregator')),
+      '#default_value' => $config->get('processors'),
     );
   }
   if (count($basic_conf)) {
@@ -527,10 +528,38 @@ function aggregator_admin_form($form, $form_state) {
  * Form submission handler for aggregator_admin_form().
  */
 function aggregator_admin_form_submit($form, &$form_state) {
-  if (isset($form_state['values']['aggregator_processors'])) {
-    $form_state['values']['aggregator_processors'] = array_filter($form_state['values']['aggregator_processors']);
+  $config = config('aggregator.settings');
+  if (isset($form_state['values']['processors'])) {
+    $form_state['values']['processors'] = array_filter($form_state['values']['processors']);
   }
-  system_settings_form_submit($form, $form_state);
+  else {
+    $form_state['values']['processors'] = $config->get('processors');
+  }
+  if (!isset($form_state['values']['fetcher'])) {
+    $form_state['values']['fetcher'] = $config->get('fetcher');
+  }
+  if (!isset($form_state['values']['parser'])) {
+    $form_state['values']['parser'] = $config->get('parser');
+  }
+  if (!isset($form_state['values']['feed_item_length'])) {
+    $form_state['values']['feed_item_length'] = $config->get('feed_item_length');
+  }
+  if (!isset($form_state['values']['feed_default_items'])) {
+    $form_state['values']['feed_default_items'] = $config->get('feed_default_items');
+  }
+
+  $config->set('fetcher', $form_state['values']['fetcher']);
+  $config->set('parser', $form_state['values']['parser']);
+  $config->set('processors', $form_state['values']['processors']);
+  $config->set('allowed_html_tags', $form_state['values']['allowed_html_tags']);
+  $config->set('category_selector', $form_state['values']['category_selector']);
+  $config->set('summary_items', $form_state['values']['summary_items']);
+  $config->set('feed_item_length', $form_state['values']['feed_item_length']);
+  $config->set('feed_default_items', (int)$form_state['values']['feed_default_items']);
+  $config->set('teaser_length', (int)$form_state['values']['teaser_length']);
+
+  $config->set('clear', (int)$form_state['values']['clear']);
+  $config->save();
 }
 
 /**

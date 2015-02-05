@@ -12,7 +12,8 @@
  *   The rendered list of items for the feed.
  */
 function aggregator_page_last() {
-  backdrop_add_feed('aggregator/rss', variable_get('site_name', 'Backdrop') . ' ' . t('aggregator'));
+  $config = config('system.core');
+  backdrop_add_feed('aggregator/rss', $config->get('site_name') . ' ' . t('aggregator'));
 
   $items = aggregator_feed_items_load('sum');
 
@@ -66,7 +67,8 @@ function aggregator_page_source_form($form, $form_state, $feed) {
  *   The rendered list of items for the feed.
  */
 function aggregator_page_category($category) {
-  backdrop_add_feed('aggregator/rss/' . $category['cid'], variable_get('site_name', 'Backdrop') . ' ' . t('aggregator - @title', array('@title' => $category['title'])));
+  $config = config('system.core');
+  backdrop_add_feed('aggregator/rss/' . $category['cid'], $config->get('site_name') . ' ' . t('aggregator - @title', array('@title' => $category['title'])));
 
   // It is safe to include the cid in the query because it's loaded from the
   // database by aggregator_category_load.
@@ -203,6 +205,7 @@ function _aggregator_page_list($items, $op, $feed_source = '') {
  * @ingroup forms
  */
 function aggregator_categorize_items($items, $feed_source = '') {
+  $config = config('aggregator.settings');
   $form['#submit'][] = 'aggregator_categorize_items_submit';
   $form['#theme'] = 'aggregator_categorize_items';
   $form['feed_source'] = array(
@@ -229,7 +232,7 @@ function aggregator_categorize_items($items, $feed_source = '') {
     }
     $done = TRUE;
     $form['categories'][$item->iid] = array(
-      '#type' => variable_get('aggregator_category_selector', 'checkboxes'),
+      '#type' => $config->get('category_selector'),
       '#default_value' => $selected,
       '#options' => $categories,
       '#size' => 10,
@@ -348,14 +351,15 @@ function template_preprocess_aggregator_item(&$variables) {
  * @see aggregator_menu()
  */
 function aggregator_page_sources() {
+  $config = config('aggregator.settings');
   $result = db_query('SELECT f.fid, f.title, f.description, f.image, MAX(i.timestamp) AS last FROM {aggregator_feed} f LEFT JOIN {aggregator_item} i ON f.fid = i.fid GROUP BY f.fid, f.title, f.description, f.image ORDER BY last DESC, f.title');
 
   $output = '';
   foreach ($result as $feed) {
     // Most recent items:
     $summary_items = array();
-    if (variable_get('aggregator_summary_items', 3)) {
-      $items = db_query_range('SELECT i.title, i.timestamp, i.link FROM {aggregator_item} i WHERE i.fid = :fid ORDER BY i.timestamp DESC', 0, variable_get('aggregator_summary_items', 3), array(':fid' => $feed->fid));
+    if ($config->get('summary_items')) {
+      $items = db_query_range('SELECT i.title, i.timestamp, i.link FROM {aggregator_item} i WHERE i.fid = :fid ORDER BY i.timestamp DESC', 0, $config->get('summary_items'), array(':fid' => $feed->fid));
       foreach ($items as $item) {
         $summary_items[] = theme('aggregator_summary_item', array('item' => $item));
       }
@@ -377,13 +381,14 @@ function aggregator_page_sources() {
  * @see aggregator_menu()
  */
 function aggregator_page_categories() {
+  $config = config('aggregator.settings');
   $result = db_query('SELECT c.cid, c.title, c.description FROM {aggregator_category} c LEFT JOIN {aggregator_category_item} ci ON c.cid = ci.cid LEFT JOIN {aggregator_item} i ON ci.iid = i.iid GROUP BY c.cid, c.title, c.description');
 
   $output = '';
   foreach ($result as $category) {
-    if (variable_get('aggregator_summary_items', 3)) {
+    if ($config->get('summary_items')) {
       $summary_items = array();
-      $items = db_query_range('SELECT i.title, i.timestamp, i.link, f.title as feed_title, f.link as feed_link FROM {aggregator_category_item} ci LEFT JOIN {aggregator_item} i ON i.iid = ci.iid LEFT JOIN {aggregator_feed} f ON i.fid = f.fid WHERE ci.cid = :cid ORDER BY i.timestamp DESC', 0, variable_get('aggregator_summary_items', 3), array(':cid' => $category->cid));
+      $items = db_query_range('SELECT i.title, i.timestamp, i.link, f.title as feed_title, f.link as feed_link FROM {aggregator_category_item} ci LEFT JOIN {aggregator_item} i ON i.iid = ci.iid LEFT JOIN {aggregator_feed} f ON i.fid = f.fid WHERE ci.cid = :cid ORDER BY i.timestamp DESC', 0, $config->get('summary_items'), array(':cid' => $category->cid));
       foreach ($items as $item) {
         $summary_items[] = theme('aggregator_summary_item', array('item' => $item));
       }
@@ -402,16 +407,17 @@ function aggregator_page_categories() {
  *   An HTML formatted string.
  */
 function aggregator_page_rss() {
+  $config = config('aggregator.settings');
   $result = NULL;
   // arg(2) is the passed cid, only select for that category.
   if (arg(2)) {
     $category = db_query('SELECT cid, title FROM {aggregator_category} WHERE cid = :cid', array(':cid' => arg(2)))->fetchObject();
-    $result = db_query_range('SELECT i.*, f.title AS ftitle, f.link AS flink FROM {aggregator_category_item} c LEFT JOIN {aggregator_item} i ON c.iid = i.iid LEFT JOIN {aggregator_feed} f ON i.fid = f.fid WHERE cid = :cid ORDER BY timestamp DESC, i.iid DESC', 0, variable_get('feed_default_items', 10), array(':cid' => $category->cid));
+    $result = db_query_range('SELECT i.*, f.title AS ftitle, f.link AS flink FROM {aggregator_category_item} c LEFT JOIN {aggregator_item} i ON c.iid = i.iid LEFT JOIN {aggregator_feed} f ON i.fid = f.fid WHERE cid = :cid ORDER BY timestamp DESC, i.iid DESC', 0, $config->get('feed_default_items'), array(':cid' => $category->cid));
   }
   // Or, get the default aggregator items.
   else {
     $category = NULL;
-    $result = db_query_range('SELECT i.*, f.title AS ftitle, f.link AS flink FROM {aggregator_item} i INNER JOIN {aggregator_feed} f ON i.fid = f.fid ORDER BY i.timestamp DESC, i.iid DESC', 0, variable_get('feed_default_items', 10));
+    $result = db_query_range('SELECT i.*, f.title AS ftitle, f.link AS flink FROM {aggregator_item} i INNER JOIN {aggregator_feed} f ON i.fid = f.fid ORDER BY i.timestamp DESC, i.iid DESC', 0, $config->get('feed_default_items'));
   }
 
   $feeds = $result->fetchAll();
@@ -431,17 +437,18 @@ function aggregator_page_rss() {
  * @ingroup themeable
  */
 function theme_aggregator_page_rss($variables) {
+  $config = config('aggregator.settings');
   $feeds = $variables['feeds'];
   $category = $variables['category'];
 
   backdrop_add_http_header('Content-Type', 'application/rss+xml; charset=utf-8');
 
   $items = '';
-  $feed_length = variable_get('feed_item_length', 'fulltext');
+  $feed_length = $config->get('feed_item_length');
   foreach ($feeds as $feed) {
     switch ($feed_length) {
       case 'teaser':
-        $summary = text_summary($feed->description, NULL, variable_get('aggregator_teaser_length', 600));
+        $summary = text_summary($feed->description, NULL, $config->get('teaser_length'));
         if ($summary != $feed->description) {
           $summary .= '<p><a href="' . check_url($feed->link) . '">' . t('read more') . "</a></p>\n";
         }
@@ -453,8 +460,8 @@ function theme_aggregator_page_rss($variables) {
     }
     $items .= format_rss_item($feed->ftitle . ': ' . $feed->title, $feed->link, $feed->description, array('pubDate' => date('r', $feed->timestamp)));
   }
-
-  $site_name = variable_get('site_name', 'Backdrop');
+  $config = config('system.core');
+  $site_name = $config->get('site_name');
   $url = url((isset($category) ? 'aggregator/categories/' . $category->cid : 'aggregator'), array('absolute' => TRUE));
   $description = isset($category) ? t('@site_name - aggregated feeds in category @title', array('@site_name' => $site_name, '@title' => $category->title)) : t('@site_name - aggregated feeds', array('@site_name' => $site_name));
 
@@ -498,6 +505,7 @@ function aggregator_page_opml($cid = NULL) {
  * @ingroup themeable
  */
 function theme_aggregator_page_opml($variables) {
+  $config = config('system.core');
   $feeds = $variables['feeds'];
 
   backdrop_add_http_header('Content-Type', 'text/xml; charset=utf-8');
@@ -505,7 +513,7 @@ function theme_aggregator_page_opml($variables) {
   $output  = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n";
   $output .= "<opml version=\"1.1\">\n";
   $output .= "<head>\n";
-  $output .= '<title>' . check_plain(variable_get('site_name', 'Backdrop')) . "</title>\n";
+  $output .= '<title>' . check_plain($config->get('site_name')) . "</title>\n";
   $output .= '<dateModified>' . gmdate(DATE_RFC2822, REQUEST_TIME) . "</dateModified>\n";
   $output .= "</head>\n";
   $output .= "<body>\n";

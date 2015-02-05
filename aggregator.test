@@ -83,8 +83,9 @@ class AggregatorTestCase extends BackdropWebTestCase {
    *   Number of feed items on default feed created by createFeed().
    */
   function getDefaultFeedItemCount() {
+    $config = config('aggregator.settings');
     // Our tests are based off of rss.xml, so let's find out how many elements should be related.
-    $feed_count = db_query_range('SELECT COUNT(*) FROM {node} n WHERE n.promote = 1 AND n.status = 1', 0, variable_get('feed_default_items', 10))->fetchField();
+    $feed_count = db_query_range('SELECT COUNT(*) FROM {node} n WHERE n.promote = 1 AND n.status = 1', 0, $config->get('feed_default_items'))->fetchField();
     return $feed_count > 10 ? 10 : $feed_count;
   }
 
@@ -327,11 +328,11 @@ class AggregatorConfigurationTestCase extends AggregatorTestCase {
    */
   function testSettingsPage() {
     $edit = array(
-      'aggregator_allowed_html_tags' => '<a>',
-      'aggregator_summary_items' => 10,
-      'aggregator_clear' => 3600,
-      'aggregator_category_selector' => 'select',
-      'aggregator_teaser_length' => 200,
+      'allowed_html_tags' => '<a>',
+      'summary_items' => 10,
+      'clear' => 3600,
+      'category_selector' => 'select',
+      'teaser_length' => 200,
     );
     $this->drupalPost('admin/config/services/aggregator/settings', $edit, t('Save configuration'));
     $this->assertText(t('The configuration options have been saved.'));
@@ -946,9 +947,11 @@ class AggregatorRenderingTestCase extends AggregatorTestCase {
    * Creates a feed and checks that feed's page.
    */
   public function testFeedPage() {
+    $config = config('aggregator.settings');
     // Increase the number of items published in the rss.xml feed so we have
     // enough articles to test paging.
-    variable_set('feed_default_items', 30);
+    $config->set('feed_default_items', 30);
+    $config->save();
 
     // Create a feed with 30 items.
     $this->createSampleNodes(30);
@@ -961,7 +964,8 @@ class AggregatorRenderingTestCase extends AggregatorTestCase {
     $this->assertTrue(!empty($elements), 'Individual source page contains a pager.');
 
     // Reset the number of items in rss.xml to the default value.
-    variable_set('feed_default_items', 10);
+    $config->set('feed_default_items', 10);
+    $config->save();
   }
 }
 
@@ -978,11 +982,13 @@ class FeedParserTestCase extends AggregatorTestCase {
   }
 
   function setUp() {
+    $config = config('aggregator.settings');
     parent::setUp();
     // Do not remove old aggregator items during these tests, since our sample
     // feeds have hardcoded dates in them (which may be expired when this test
     // is run).
-    variable_set('aggregator_clear', AGGREGATOR_CLEAR_NEVER);
+    $config->set('clear', AGGREGATOR_CLEAR_NEVER);
+    $config->save();
   }
 
   /**

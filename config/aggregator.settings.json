@@ -1,0 +1,15 @@
+{
+    "_config_name": "aggregator.settings",
+    "allowed_html_tags": "<a> <b> <br> <dd> <dl> <dt> <em> <i> <li> <ol> <p> <strong> <u> <ul>",
+    "fetcher": "aggregator",
+    "parser": "aggregator",
+    "processors": [
+        "aggregator"
+    ],
+    "category_selector": "checkboxes",
+    "summary_items": 3,
+    "feed_default_items": 10,
+    "feed_item_length": "fulltext",
+    "teaser_length": 600,
+    "clear": 9676800
+}

@@ -71,7 +71,8 @@ function aggregator_aggregator_remove($feed) {
  * separate from aggregator API functionality.
  */
 function aggregator_form_aggregator_admin_form_alter(&$form, $form_state) {
-  if (in_array('aggregator', variable_get('aggregator_processors', array('aggregator')))) {
+  $config = config('aggregator.settings');
+  if (in_array('aggregator', $config->get('processors'))) {
     $info = module_invoke('aggregator', 'aggregator_process', 'info');
     $items = backdrop_map_assoc(array(3, 5, 10, 15, 20, 25), '_aggregator_items');
     $period = backdrop_map_assoc(array(3600, 10800, 21600, 32400, 43200, 86400, 172800, 259200, 604800, 1209600, 2419200, 4838400, 9676800), 'format_interval');
@@ -84,41 +85,41 @@ function aggregator_form_aggregator_admin_form_alter(&$form, $form_state) {
         '#title' => t('Default processor settings'),
         '#description' => $info['description'],
         '#collapsible' => TRUE,
-        '#collapsed' => !in_array('aggregator', variable_get('aggregator_processors', array('aggregator'))),
+        '#collapsed' => !in_array('aggregator', $config->get('processors')),
       );
     }
     else {
       $form['modules']['aggregator'] = array();
     }
 
-    $form['modules']['aggregator']['aggregator_summary_items'] = array(
+    $form['modules']['aggregator']['summary_items'] = array(
       '#type' => 'select',
       '#title' => t('Number of items shown in listing pages'),
-      '#default_value' => variable_get('aggregator_summary_items', 3),
+      '#default_value' => $config->get('summary_items'),
       '#empty_value' => 0,
       '#options' => $items,
     );
 
-    $form['modules']['aggregator']['aggregator_clear'] = array(
+    $form['modules']['aggregator']['clear'] = array(
       '#type' => 'select',
       '#title' => t('Discard items older than'),
-      '#default_value' => variable_get('aggregator_clear', 9676800),
+      '#default_value' => $config->get('clear'),
       '#options' => $period,
       '#description' => t('Requires a correctly configured <a href="@cron">cron maintenance task</a>.', array('@cron' => url('admin/reports/status'))),
     );
 
-    $form['modules']['aggregator']['aggregator_category_selector'] = array(
+    $form['modules']['aggregator']['category_selector'] = array(
       '#type' => 'radios',
       '#title' => t('Select categories using'),
-      '#default_value' => variable_get('aggregator_category_selector', 'checkboxes'),
+      '#default_value' => $config->get('category_selector'),
       '#options' => array('checkboxes' => t('checkboxes'),
       'select' => t('multiple selector')),
       '#description' => t('For a small number of categories, checkboxes are easier to use, while a multiple selector works well with large numbers of categories.'),
     );
-    $form['modules']['aggregator']['aggregator_teaser_length'] = array(
+    $form['modules']['aggregator']['teaser_length'] = array(
       '#type' => 'select',
       '#title' => t('Length of trimmed description'),
-      '#default_value' => variable_get('aggregator_teaser_length', 600),
+      '#default_value' => $config->get('teaser_length'),
       '#options' => backdrop_map_assoc(array(0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000), '_aggregator_characters'),
       '#description' => t("The maximum number of characters used in the trimmed version of content.")
     );
@@ -191,7 +192,8 @@ function aggregator_save_item($edit) {
  *   Object describing feed.
  */
 function aggregator_expire($feed) {
-  $aggregator_clear = variable_get('aggregator_clear', 9676800);
+  $config = config('aggregator.settings');
+  $aggregator_clear = $config->get('aggregator_clear');
 
   if ($aggregator_clear != AGGREGATOR_CLEAR_NEVER) {
     // Remove all items that are older than flush item timer.
