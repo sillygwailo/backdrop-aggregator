@@ -8,7 +8,7 @@
 /**
  * Defines a base class for testing the Aggregator module.
  */
-class AggregatorTestCase extends DrupalWebTestCase {
+class AggregatorTestCase extends BackdropWebTestCase {
   function setUp() {
     parent::setUp('aggregator', 'aggregator_test');
     $web_user = $this->drupalCreateUser(array('administer news feeds', 'access news feeds', 'create article content'));
@@ -279,17 +279,17 @@ EOF;
   }
 
   function getRSS091Sample() {
-    return $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'aggregator') . '/tests/aggregator_test_rss091.xml';
+    return $GLOBALS['base_url'] . '/' . backdrop_get_path('module', 'aggregator') . '/tests/aggregator_test_rss091.xml';
   }
 
   function getAtomSample() {
     // The content of this sample ATOM feed is based directly off of the
     // example provided in RFC 4287.
-    return $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'aggregator') . '/tests/aggregator_test_atom.xml';
+    return $GLOBALS['base_url'] . '/' . backdrop_get_path('module', 'aggregator') . '/tests/aggregator_test_atom.xml';
   }
 
   function getHtmlEntitiesSample() {
-    return $GLOBALS['base_url'] . '/' . drupal_get_path('module', 'aggregator') . '/tests/aggregator_test_title_entities.xml';
+    return $GLOBALS['base_url'] . '/' . backdrop_get_path('module', 'aggregator') . '/tests/aggregator_test_title_entities.xml';
   }
 
   /**
@@ -936,7 +936,7 @@ class AggregatorRenderingTestCase extends AggregatorTestCase {
     $feed->block = 0;
     aggregator_save_feed((array) $feed);
     // It is necessary to flush the cache after saving the number of items.
-    drupal_flush_all_caches();
+    backdrop_flush_all_caches();
     // Check that the block is no longer displayed.
     $this->drupalGet('node');
     $this->assertNoText(t($block['title']), 'Feed block is not displayed on the page when number of items is set to 0.');
