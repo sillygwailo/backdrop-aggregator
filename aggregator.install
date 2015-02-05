@@ -274,67 +274,62 @@ function aggregator_schema() {
 }
 
 /**
- * @addtogroup updates-6.x-to-7.x
+ * @addtogroup updates-drupal-to-backdrop
  * @{
  */
 
 /**
- * Add hash column to aggregator_feed table.
+ * Move Aggregator settings from variables to config.
  */
-function aggregator_update_7000() {
-  db_add_field('aggregator_feed', 'hash', array('type' => 'varchar', 'length' => 64, 'not null' => TRUE, 'default' => ''));
+function aggregator_update_1000() {
+   // Migrate variables to config.
+   $config = config('aggregator.settings');
+   $variables = array('allowed_html_tags', 'category_selector', 'summary_items', 'clear',  'teaser_length');
+   // Remove the 'aggregator_' prefix from variables.
+   foreach ($variables as $variable) {
+     $config->set($variable, update_variable_get('aggregator_' . $variable));
+     update_variable_del('aggregator_' . $variable);
+   }
+   // No 'aggregator_' prefix to remove for these ones.
+   $variables = array('feed_item_length', 'feed_default_items',);
+   foreach ($variables as $variable) {
+     if (update_variable_get($variable)) {
+       $config->set($variable, update_variable_get($variable));
+       update_variable_del($variable);
+     }
+   }
+   // aggregator_fetcher, aggregator_parser, and aggregator_processors are less certain to be already set.
+   if (update_variable_get('aggregator_fetcher')) {
+     $config->set('fetcher', update_variable_get('aggregator_fetcher'));
+   }
+   else {
+     $config->set('fetcher', 'aggregator');
+   }
+   if (update_variable_get('aggregator_parser')) {
+     $config->set('parser', update_variable_get('aggregator_fetcher'));
+   }
+   else {
+     $config->set('parser', 'aggregator');
+   }
+   if (update_variable_get('aggregator_processors')) {
+     $config->set('processors', update_variable_get('aggregator_processors'));
+   }
+   else {
+     $config->set('processors', array('aggregator')); // This one can have multiple values.
+   }
+   update_variable_del('aggregator_fetcher');
+   update_variable_del('aggregator_parser');
+   update_variable_del('aggregator_processors');
+   $config->save();
 }
 
 /**
- * Add aggregator teaser length to settings from old global default teaser length
+ * Implements hook_update_last_removed().
  */
-function aggregator_update_7001() {
-  variable_set('aggregator_teaser_length', variable_get('teaser_length'));
+function aggregator_update_last_removed() {
+  return 7004;
 }
 
 /**
- * Add queued timestamp.
- */
-function aggregator_update_7002() {
-  db_add_field('aggregator_feed', 'queued', array(
-    'type' => 'int',
-    'not null' => TRUE,
-    'default' => 0,
-    'description' => 'Time when this feed was queued for refresh, 0 if not queued.',
-  ));
-  db_add_index('aggregator_feed', 'queued', array('queued'));
-}
-
-/**
- * @} End of "addtogroup updates-6.x-to-7.x"
- */
-
-/**
- * @addtogroup updates-7.x-extra
- * @{
- */
-
-/**
- * Increase the length of {aggregator_feed}.url.
- */
-function aggregator_update_7003() {
-  db_drop_unique_key('aggregator_feed', 'url');
-  db_change_field('aggregator_feed', 'url', 'url', array('type' => 'text', 'not null' => TRUE, 'description' => 'URL to the feed.'));
-  db_change_field('aggregator_feed', 'link', 'link', array('type' => 'text', 'not null' => TRUE, 'description' => 'The parent website of the feed; comes from the <link> element in the feed.'));
-  db_change_field('aggregator_item', 'link', 'link', array('type' => 'text', 'not null' => TRUE, 'description' => 'Link to the feed item.'));
-  db_change_field('aggregator_item', 'guid', 'guid', array('type' => 'text', 'not null' => TRUE, 'description' => 'Unique identifier for the feed item.'));
-  db_add_index('aggregator_feed', 'url', array(array('url', 255)));
-}
-
-/**
- * Add index on timestamp.
- */
-function aggregator_update_7004() {
-  if (!db_index_exists('aggregator_item', 'timestamp')) {
-    db_add_index('aggregator_item', 'timestamp', array('timestamp'));
-  }
-}
-
-/**
- * @} End of "addtogroup updates-7.x-extra"
+ * @} End of "addtogroup updates-drupal-to-backdrop"
  */
